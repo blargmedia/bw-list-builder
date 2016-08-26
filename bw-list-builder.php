@@ -35,8 +35,12 @@
 
     5. actions
       5.1   bwlb_save_subscription()
-      
+      5.2   bwlb_save_subscriber()
+
     6. helpers
+      6.1   bwlb_subscriber_has_subscription()
+      6.2   bwlb_get_subscriptions()
+
     7. custom post types
     8. admin pages
     9. settings
@@ -284,7 +288,7 @@ function bwlb_save_subscription() {
     // if saved subscriber id will be non zero
     if ( $subscriber_id ):
 
-      // if already subscribed
+      // if already subscribed - create and use a helper function
       if (bwlb_subscriber_has_subscription( $subscriber_data, $list_id )):
 
         // get the list from the form post
@@ -316,7 +320,113 @@ function bwlb_save_subscription() {
   bwlb_return_json($result);
 }
 
+// 5.2
+// creates a new subscriber or updates an existing one
+function bwlb_save_subscriber ( $subscriber_data ) {
+
+  // init subscriber
+  $subscriber_id = 0;
+
+  try {
+
+    $subscriber_id = bwlb_get_subscriber_id( $subscriber_data['email'] );
+
+    // if not already a subscriber, add to subscribers
+    if ( !$subscriber_id ):
+
+      $subscriber_id = wp_insert_post ( // default wp function to add posts to db
+        array (
+          'post_type' => 'bwlb_subscriber',
+          'post_title' => $subscriber_data['fname'] . ' ' . $subscriber_data['lname'],
+          'post_status' => 'publish'
+        ),
+        true
+      );
+    endif;
+
+    // add or update the meta data with wp function update_field
+    update_field(bwlb_get_acf_key('bwlb_fname'), $subscriber_data['fname'], $subscriber_id);
+    update_field(bwlb_get_acf_key('bwlb_lname'), $subscriber_data['lname'], $subscriber_id);
+    update_field(bwlb_get_acf_key('bwlb_email'), $subscriber_data['email'], $subscriber_id);
+
+  } catch ( Exception $e ) {
+
+    // php error
+
+  }
+
+  // cleanup wp post data
+  wp_reset_query();
+
+  return $subscriber_id;
+
+}
+
 /* 6. helpers */
+
+// 6.1
+// check a subscriber's subscriptions to see if the passed list is already there
+function bwlb_subscriber_has_subscription ( $subscriber_id, $list_id ) {
+
+  // init as negative outcome
+  $has_subscription = false;
+
+  // use wp function to get the subscriber 'object' (the custom post type)
+  $subscriber = get_post($subscriber_id);
+
+  // check the subscriptions
+  $subscriptions = bwlb_get_subscriptions($subscriber_id);
+
+  if ( in_array($list_id, $subscriptions) ):
+    // subscriber is already subscribed
+    $has_subscription = true;
+  endif;
+
+  return $has_subscription;
+}
+
+// 6.2
+// get a subscriber id from their email address
+function bwlb_get_subscriptions($email) {
+
+  // init
+  $subscriber_id = 0;
+
+  try {
+
+    // check subscriber existence
+    $subscriber_query = new WP_Query(
+      array(
+        'post_type'=> 'bwlb_subscriber',
+        'posts_per_page' => 1,
+        'meta_key' => 'bwlb_email',
+        'meta_query' => array (
+          array (
+            'key' => 'bwlb_email',
+            'value' => $email,
+            'compare' => '='
+          )
+        )
+      )
+    );
+
+    if ($subscriber_query->have_posts()):
+
+      $subscriber_query->the_post();
+      $suscriber_id = get_the_ID();  // from the_post
+    endif;
+
+  } catch (Exception $e) {
+    // error
+  }
+
+  // reset wp post object - clear the_post object
+  wp_reset_query();
+
+  return (int) $subscriber_id;
+
+}
+
 
 /* 7. custom post types	*/
 
