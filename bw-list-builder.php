@@ -44,6 +44,8 @@
       6.3   bwlb_get_subscriptions()
       6.4   bwlb_return_json()
       6.5   bwlb_get_acf_key()
+      6.6   bwlb_get_subscriber_data()
+      6.7   bwlb_validate_subscriber()
 
     7. custom post types
     8. admin pages
@@ -526,6 +528,47 @@ function bwlb_get_acf_key( $field_name ) {
 
 }
 
+// 6.6
+// return an array of subscriber data, including the subscriptions
+function bwlb_get_subscriber_data ( $subscriber_id) {
+  // init
+  $subscriber_data = array();
+
+  // get the subscriber object (custom post type)
+  $subscriber = get_post($subscriber_id);
+
+    // validate and build array
+    if ( bwlb_validate_subscriber($subscriber)):
+
+      $fname = get_field(bwlb_get_acf_key('bwlb_fname'), $subscriber_id);
+      $lname = get_field(bwlb_get_acf_key('bwlb_lname'), $subscriber_id);
+
+      $subscriber_data = array (
+        'name' => $fname . ' ' . $lname,
+        'fname' => $fname,
+        'lname' => $lname,
+        'email' => get_field(bwlb_get_acf_key('bwlb_email'), $subscriber_id),
+        'subscriptions' => bwlb_get_subscriptions($subscriber_id)
+      );
+
+    endif;
+
+  return $subscriber_data;
+}
+
+// 6.7
+// ensure subscriber has a post type and it's the correct one
+function bwlb_validate_subscriber($subscriber) {
+
+  $valid_subscriber = false;
+
+  if ( isset($subscriber->post_type) && $subscriber->post_type == 'bwlb_subscriber'):
+    $valid_subscriber = true;
+  endif;
+
+  return $valid_subscriber;
+
+}
 
 /* 7. custom post types	*/
 
