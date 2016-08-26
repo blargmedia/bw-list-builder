@@ -222,7 +222,8 @@ function bwlb_list_column_headers ( $columns ) {
   // new associative array to override the incoming param
   $columns = array (
     'cb'    => '<input type="checkbox" />',  // checkbox in the subscriber display
-    'title' => __('List Name') // __() to allow for translatable text strings
+    'title' => __('List Name'), // __() to allow for translatable text strings
+    'shortcode' => __('Shortcode')
   );
 
   return $columns;
@@ -238,12 +239,9 @@ function bwlb_list_column_data ( $column, $post_id ) {
 
   switch ( $column ) {
 
-    case 'tmp':
-      // get the custom name data
-      //$fname = get_field('bwlb_fname', $post_id);
-      //$lname = get_field('bwlb_lname', $post_id);
-      //$output .= $fname . ' ' . $lname;
-      //break;
+    case 'shortcode':
+      $output .= '[bwlb_form id="' . $post_id . '"]';
+      break;
   }
 
   echo $output; // display the retrieved data
