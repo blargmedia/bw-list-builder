@@ -36,10 +36,14 @@
     5. actions
       5.1   bwlb_save_subscription()
       5.2   bwlb_save_subscriber()
+      5.3   bwlb_add_subscription()
 
     6. helpers
       6.1   bwlb_subscriber_has_subscription()
       6.2   bwlb_get_subscriptions()
+      6.3   bwlb_get_subscriptions()
+      6.4   bwlb_return_json()
+      6.5   bwlb_get_acf_key()
 
     7. custom post types
     8. admin pages
@@ -362,6 +366,31 @@ function bwlb_save_subscriber ( $subscriber_data ) {
 
 }
 
+// 5.3
+// adds list to subscriber's subscriptions
+function bwlb_add_subscription ( $subscriber_id, $list_id ) {
+
+  // init
+  $subscription_saved = false;
+
+  // subscriber is not subscribed to the passed list
+  if ( !bwlb_subscriber_has_subscription($subscriber_id, $list_id) ):
+
+    // get the subs and append the new list id
+    $subscriptions = bwlb_get_subscriptions( $subscriber_id );
+    array_push( $subscriptions, $list_id ); // same as subscriptions[]=$list_id;
+
+    // update the subs
+    update_field( bwlb_get_acf_key('bwlb_subscriptions'), $subscriptions, $subscriber_id );
+
+    $subscription_saved = true;
+
+  endif;
+
+  return $subscription_saved;
+}
+
+
 /* 6. helpers */
 
 // 6.1
@@ -387,7 +416,7 @@ function bwlb_subscriber_has_subscription ( $subscriber_id, $list_id ) {
 
 // 6.2
 // get a subscriber id from their email address
-function bwlb_get_subscriptions($email) {
+function bwlb_get_subscriber_id($email) {
 
   // init
   $subscriber_id = 0;
@@ -424,6 +453,76 @@ function bwlb_get_subscriptions($email) {
   wp_reset_query();
 
   return (int) $subscriber_id;
+
+}
+
+// 6.3
+// get an array of list_ids
+function bwlb_get_subscriptions ( $subscriber_id ) {
+
+  // init
+  $subscriptions = array();
+
+  $lists = get_field( bwlb_get_acf_key('bwlb_subscriptions'), $subscriber_id );
+
+  if ( $lists ):
+
+    // check array-ness and 1 or more items
+    if ( is_array($lists) && count($lists) ):
+
+      // build up subscriptions as an array of lists
+      foreach ($lists as &$list):
+        $subscriptions[]= (int) $list->ID;
+      endforeach;
+
+    elseif ( is_numeric($lists) ):
+      $subscriptions[]=$lists;
+    endif;
+
+  endif;
+
+  return (array)$subscriptions;
+}
+
+// 6.4
+// convert php array into json
+function bwlb_return_json ( $php_array ) {
+
+  // builtin php function to do the encoding
+  $json_result = json_encode( $php_array);
+
+  // return and kill the php process
+  die($json_result);
+
+  // stop all other php processing
+  exit;
+
+}
+
+// 6.5
+// switches out custom field names for the ACT field key names
+function bwlb_get_acf_key( $field_name ) {
+
+  $field_key = $field_name;
+
+  switch ( $field_name ) {
+
+    case 'bwlb_fname':
+      $field_key = 'field_57bf831d4e1d0';
+      break;
+    case 'bwlb_lname':
+      $field_key = 'field_57bf83344e1d1';
+      break;
+    case 'bwlb_email':
+      $field_key = 'field_57bf83504e1d2';
+      break;
+    case 'bwlb_subscriptions':
+      $field_key = 'field_57bf83674e1d3';
+      break;
+
+  }
+
+  return $field_key;
 
 }
 
