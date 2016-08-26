@@ -17,6 +17,8 @@
       1.4   titles for post types without titles
       1.5   custom admin column headers - lists
       1.6   custom admin column data - lists
+      1.7   ajax actions for non logged in users
+      1.8   ajax actions for logged in users with privs
 
     2. shortcodes
       2.1   bwlb_register_shortcodes()
@@ -80,6 +82,14 @@ add_filter('manage_edit-bwlb_list_columns', 'bwlb_list_column_headers');
 // register custom admin column data with priority 1 and indicate we need 2 params
 add_filter('manage_bwlb_list_posts_custom_column', 'bwlb_list_column_data', 1, 2);
 
+// 1.7
+// register ajax actions for regular website (not logged in) visitors
+add_action('wp_ajax_nopriv_bwlb_save_subscription', 'bwlb_save_subscription');
+
+// 1.8
+// register ajax actions for logged-in users with privs
+add_action('wp_ajax_bwlb_save_subscription','bwlb_save_subscription');
+
 
 /* 2. shortcodes */
 
@@ -107,7 +117,7 @@ function bwlb_form_shortcode( $args, $content="" ) {  // wp auto passes in the a
   $output = '
     <div class="bwlb">
       <form id="bwlb_form" name="bwlb_form" class="bwlb-form" method="post"
-      action="/wp-admin/admin-ajax.php?action=bwlb_save_subscription">
+      action="/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_save_subscription">
 
         <input type="hidden" name="bwlb_list" value="'. $list_id .'">
 
