@@ -268,7 +268,9 @@ function bwlb_save_subscription() {
   // init result data to be the negative outcome
   $result = array (
     'status' => 0,
-    'message' => 'Subscription was not saved.'
+    'message' => 'Subscription was not saved.',
+    'error' => '',
+    'errors' => array()
   );
 
   // error storage
@@ -296,30 +298,49 @@ function bwlb_save_subscription() {
       'email'=> esc_attr( $_POST['bwlb_email'] )
     );
 
-    // attempt to create/save subscriber
-    $subscriber_id = bwlb_save_subscriber( $subscriber_data );
+    // form validation
+    if ( !strlen( $subscriber_data['fname'] ) ) {
+      $errors['fname'] = 'First name is required';
+    }
+    if ( !strlen( $subscriber_data['email'] ) ) {
+      $errors['email'] = 'Email address is required';
+    }
+    if ( strlen ( $subscriber_data['email'] ) && !is_email( $subscriber_data['email'] ) ) {
+      $errors['email'] = 'Email must be valid';
+    }
 
-    // if saved subscriber id will be non zero
-    if ( $subscriber_id ):
+    // check for errors
+    if ( count($errors) ):
+      $result['error'] = 'Some fields are still required.';
+      $result['errors'] = $errors;
 
-      // if already subscribed - create and use a helper function
-      if (bwlb_subscriber_has_subscription( $subscriber_data, $list_id )):
+    else: // otherwise proceed
 
-        // get the list from the form post
-        $list = get_post( $list_id );  // wp builtin function to get a post
+      // attempt to create/save subscriber
+      $subscriber_id = bwlb_save_subscriber( $subscriber_data );
 
-        // setup the error message
-        $result ['message'] .= esc_attr( $subscriber_data['email'] . ' is already subscribef to ' . $list->post_title . '.');
+      // if saved subscriber id will be non zero
+      if ( $subscriber_id ):
 
-      else:
+        // if already subscribed - create and use a helper function
+        if (bwlb_subscriber_has_subscription( $subscriber_data, $list_id )):
 
-        // save the subscription
-        $subscription_saved = bwlb_add_subscription ( $subscriber_id, $list_id );
+          // get the list from the form post
+          $list = get_post( $list_id );  // wp builtin function to get a post
 
-        // check success (non zero)
-        if ( $subscription_saved ):
-          $result['status'] = 1;
-          $result['message'] = 'Subscription saved';
+          // setup the error message
+          $result ['error'] .= esc_attr( $subscriber_data['email'] . ' is already subscribef to ' . $list->post_title . '.');
+
+        else:
+
+          // save the subscription
+          $subscription_saved = bwlb_add_subscription ( $subscriber_id, $list_id );
+
+          // check success (non zero)
+          if ( $subscription_saved ):
+            $result['status'] = 1;
+            $result['message'] = 'Subscription saved';
+          endif;
         endif;
       endif;
     endif;
@@ -452,7 +473,7 @@ function bwlb_get_subscriber_id($email) {
     if ($subscriber_query->have_posts()):
 
       $subscriber_query->the_post();
-      $suscriber_id = get_the_ID();  // from the_post
+      $subscriber_id = get_the_ID();  // from the_post
     endif;
 
   } catch (Exception $e) {
@@ -546,7 +567,7 @@ function bwlb_get_subscriber_data ( $subscriber_id) {
   $subscriber = get_post($subscriber_id);
 
     // validate and build array
-    if ( bwlb_validate_subscriber($subscriber)):
+    if ( isset($subscriber->post_type) && $subscriber->post_type == 'bwlb_subscriber' ):
 
       $fname = get_field(bwlb_get_acf_key('bwlb_fname'), $subscriber_id);
       $lname = get_field(bwlb_get_acf_key('bwlb_lname'), $subscriber_id);
