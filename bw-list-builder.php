@@ -90,6 +90,10 @@ add_action('wp_ajax_nopriv_bwlb_save_subscription', 'bwlb_save_subscription');
 // register ajax actions for logged-in users with privs
 add_action('wp_ajax_bwlb_save_subscription','bwlb_save_subscription');
 
+// 1.9
+// load external files
+add_action('wp_enqueue_scripts','bwlb_public_scripts');
+
 
 /* 2. shortcodes */
 
@@ -258,6 +262,22 @@ function bwlb_list_column_data ( $column, $post_id ) {
 }
 
 /* 4. external scripts */
+
+// 4.1
+// load external files into public website
+function bwlb_public_scripts() {
+
+  // register scripts with WP
+  wp_register_script('bw-list-builder-js-public', // unique name for WP
+    plugins_url('/js/public/bw-list-builder.js', __FILE__), // builtin WP function
+    array('jquery'), // required scripts that WP needs to load prior to ours
+    '', true);
+
+  // add to queue of scripts that get loaded into every page
+  wp_enqueue_script('bw-list-builder-js-public');
+
+}
+
 
 /* 5. actions */
 
