@@ -5,10 +5,9 @@ jQuery(document).ready(function($){
   var wpajax_url = document.location.protocol + '//' + document.location.host  + '/wp_wecf/wp-admin/admin-ajax.php';
 
   // add the function call param
-  var email_capture_url = wpajax_url + '?action=bwlb_save_subscription';
+  var email_capture_url = wpajax_url += '?action=bwlb_save_subscription';
 
-  // hijack submission request
-  $('form.bwlb-form').bind('submit', function() {
+  $('form.bwlb-form').bind('submit', function(){    // hijack submission button
 
     // get the jquery form object
     $form = $(this);
@@ -17,30 +16,31 @@ jQuery(document).ready(function($){
     var form_data = $form.serialize();
 
     //init ajax call
-    $.ajax ( {
+    $.ajax({
       'method':'post',
       'url':email_capture_url,
       'data':form_data,
       'dataType':'json',
       'cache':false,
       'success':function(data,textStatus) {
-        if (data.status == 1) {
+        if(data.status == 1) {
           // reset the form on successful submission
           $form[0].reset();
           // notify user
           alert(data.message);
         } else {
+
           // build error message
-          var msg = data.message + '\n' + data.error + '\r';
+          var msg = data.message + '\n' + data.error + '\n';
 
           // loop over the errors
-          $.each(data.errors, function(index,value) {
+          $.each(data.errors, function(key,value) {
             // append the errors one line at a time
             msg += '\n';
-            msg += '- ' + value;
-          }
+            msg += '- '+ value;
+          });
           // notify user
-          alert(data.message);
+          alert(msg);
         }
       },
       'error': function(jqXHR, textStatus, errorThrown) {
@@ -51,6 +51,6 @@ jQuery(document).ready(function($){
     // stop the form from submitting normally
     return false;
 
-  }
+  });
 
 });
