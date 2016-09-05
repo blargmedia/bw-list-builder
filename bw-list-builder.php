@@ -114,7 +114,9 @@ function bwlb_form_shortcode( $args, $content="") {  // wp auto passes in the ar
   $list_id = 0;
   if ( isset($args['id']) ) $list_id = (int)$args['id'];
 
-
+  // allow titles in the shortcode
+  $title = '';
+  if ( isset($args['title']) ) $title = (string) $args['title'];
 
 
   // setup output variable - the form html that will be returned
@@ -123,9 +125,15 @@ function bwlb_form_shortcode( $args, $content="") {  // wp auto passes in the ar
       <form id="bwlb_form" name="bwlb_form" class="bwlb-form" method="post"
       action="/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_save_subscription">
 
-        <input type="hidden" name="bwlb_list" value="'. $list_id .'">
+        <input type="hidden" name="bwlb_list" value="'. $list_id .'">';
 
-        <p class="bwlb-input-container">
+        if (strlen($title)):
+
+          $output .= '<h3 class="bwlb-title">'. $title .'</h3>';
+
+        endif;
+
+        $output .= '<p class="bwlb-input-container">
           <label>Your Name</label><br/>
           <input type="text" name="bwlb_fname" placeholder="first name" />
           <input type="text" name="bwlb_lname" placeholder="last name" />
@@ -275,9 +283,12 @@ function bwlb_public_scripts() {
   wp_register_script('bw-list-builder-js-public',
     plugins_url('/js/public/bw-list-builder.js', __FILE__), array('jquery'), '', true);
 
+  wp_register_style('bw-list-builder-css-public',
+    plugins_url('/css/public/bw-list-builder.css', __FILE__));
 
   // add to queue of scripts that get loaded into every page
   wp_enqueue_script('bw-list-builder-js-public');
+  wp_enqueue_style('bw-list-builder-css-public');
 
 }
 
@@ -336,13 +347,12 @@ function bwlb_save_subscription() {
       // attempt to create/save subscriber
       $subscriber_id = bwlb_save_subscriber( $subscriber_data );
 
-      //echo "[save, error else: sub_id = $subscriber_id]";
       // if saved subscriber id will be non zero
       if ( $subscriber_id ):
 
         // if already subscribed - create and use a helper function
         if (bwlb_subscriber_has_subscription( $subscriber_id, $list_id )):
-          //echo "[save, has sub]";
+
           // get the list from the form post
           $list = get_post( $list_id );  // wp builtin function to get a post
 
@@ -350,11 +360,10 @@ function bwlb_save_subscription() {
           $result ['error'] = esc_attr( $subscriber_data['email'] . ' is already subscribef to ' . $list->post_title . '.');
 
         else:
-          //echo "[save, no sub]";
+
           // save the subscription
           $subscription_saved = bwlb_add_subscription ( $subscriber_id, $list_id );
 
-          //echo "[no sub, sub_saved = $subscription_saved]";
           // check success (non zero)
           if ( $subscription_saved ):
             $result['status'] = 1;
@@ -389,7 +398,7 @@ function bwlb_save_subscriber ( $subscriber_data ) {
   try {
 
     $subscriber_id = bwlb_get_subscriber_id( $subscriber_data['email'] );
-    //echo "[save sub_id = $subscriber_id]";
+
     // if not already a subscriber, add to subscribers
     if ( !$subscriber_id ):
 
