@@ -18,7 +18,7 @@ function bwlb_register_bwlb_subscriber() {
 		"show_in_rest" => false,
 		"rest_base" => "",
 		"has_archive" => false,
-		"show_in_menu" => true,
+		"show_in_menu" => false,
 				"exclude_from_search" => true,
 		"capability_type" => "post",
 		"map_meta_cap" => true,
