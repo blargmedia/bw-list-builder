@@ -143,6 +143,9 @@ function bwlb_register_shortcodes() {
   // sets bwlb_form against form_shortcode callback function
   add_shortcode('bwlb_form', 'bwlb_form_shortcode');
 
+  // unsusbscribe form
+  add_shortcode('bwlb_manage_subscriptions', 'bwlb_manage_subscriptions_shortcode');
+
 }
 
 // 2.2
@@ -196,6 +199,47 @@ function bwlb_form_shortcode( $args, $content="") {  // wp auto passes in the ar
       </form>
     </div>
   ';
+
+  return $output;
+
+}
+
+
+// 2.3
+// shortcode to show a form for managing user list subscriptions
+// e.g. [bwlb_manage_subscriptions]
+function bwlb_manage_subscriptions_shortcode ( $args, $content="" ) {
+
+  // start of the return string
+  $output = '<div class="bwlb bwlb-manage-subscriptions">';
+
+  try {
+
+    // get the (sanitized) email from the url
+    $email = ( isset($_GET['email']) ) ? esc_attr($_GET['email']) : '';
+
+    // subscriber id from email
+    $subscriber_id = bwlb_get_subscriber_id($email);
+
+    // data from id
+    $subscriber_data = bwlb_get_subscriber_data($subscriber_id);
+
+    // get the subscriptions html if valid
+    if ($subscriber_id) :
+
+      $output .= bwlb_get_manage_subscriptions_html($subscriber_id); // helper
+
+    else:
+
+      $output .= '<p>This link is invalid</p>';
+
+    endif;
+
+  } catch (Exception $e) {
+
+  }
+
+  $output .= '</div>';
 
   return $output;
 
@@ -896,6 +940,80 @@ function bwlb_get_current_options() {
   return $current_options;
 }
 
+// 6.12
+//
+function bwlb_get_manage_subscriptions_html ($subscriber_id) {
+
+  $output = '';
+
+  try {
+
+    // lists from id
+    $lists = bwlb_get_subscriptions ($subscriber_id);
+
+    // data from id
+    $subscriber_data = bwlb_get_subscriber_data($subscriber_id);
+
+    // page title
+    $title = $subscriber_data['fname'] . '\'s Subscriptions';
+
+    // form html
+    $output .= '
+      <form id="bwlb_manage_subsriptions_form" class="bwlb-form" method="post"
+      action="wp_wecf/wp-admin/admin-ajax.php?action=bwlb_unsubscribe">
+
+        <input type="hidden" name="subscriber_id" value="' . $subscriber_id . '">
+
+        <h3 class="bwlb_title">' . $title . '</h3>';
+
+        if ( !count($lists) ):
+
+          $output .= '<p>No active subscriptions found.</p>';
+
+        else:
+
+          $output .= '
+            <table>
+              <tbody>';
+
+              foreach ( $lists as &$list_id ):
+
+                $list_object = get_post($list_id);
+
+                $output .= '
+                <tr>
+                  <td>
+                  '.
+                    $list_object->post_title
+                  .'
+                  </td>
+                  <td>
+                    <label>
+                      <input type="checkbox" name="list_ids[]" value="'. $list_object->ID .'"/> Unsubscribe
+                    </label>
+                  </td>
+                </tr>';
+
+              endforeach;
+
+              $output .= '
+              </tbody>
+            </table>
+
+            <p><input type="submit" value="Save Changes" /></p>';
+
+        endif;
+
+    $output .= '
+      </form>
+    ';
+
+  } catch (Exception $e) {
+
+  }
+
+  return $output;
+}
 
 /* 7. custom post types	*/
 
