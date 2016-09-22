@@ -28,6 +28,7 @@
     2. shortcodes
       2.1   bwlb_register_shortcodes()
       2.2   bwlb_form_shortcode()
+      2.3   bwlb_manage_subscriptions_shortcode()
 
     3. filters
       3.1   bwlb_subscriber_column_headers()
@@ -47,6 +48,8 @@
       5.1   bwlb_save_subscription()
       5.2   bwlb_save_subscriber()
       5.3   bwlb_add_subscription()
+      5.4   bwlb_unsubscribe()
+      5.5   bwlb_remove_subscription()
 
     6. helpers
       6.1   bwlb_subscriber_has_subscription()
@@ -105,10 +108,12 @@ add_filter('manage_bwlb_list_posts_custom_column', 'bwlb_list_column_data', 1, 2
 // 1.7
 // register ajax actions for regular website (not logged in) visitors
 add_action('wp_ajax_nopriv_bwlb_save_subscription', 'bwlb_save_subscription');
+add_action('wp_ajax_nopriv_bwlb_unsubscribe', 'bwlb_unsubscribe');
 
 // 1.8
-// register ajax actions for logged-in users with privs
+// register ajax actions for logged-in users with privs (e.g. admins)
 add_action('wp_ajax_bwlb_save_subscription','bwlb_save_subscription');
+add_action('wp_ajax_bwlb_unsubscribe', 'bwlb_unsubscribe');
 
 // 1.9
 // load external files
@@ -164,7 +169,7 @@ function bwlb_form_shortcode( $args, $content="") {  // wp auto passes in the ar
   // setup output variable - the form html that will be returned
   $output = '
     <div class="bwlb">
-      <form id="bwlb_form" name="bwlb_form" class="bwlb-form" method="post"
+      <form id="bwlb_register_form" name="bwlb_form" class="bwlb-form" method="post"
       action="/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_save_subscription">
 
         <input type="hidden" name="bwlb_list" value="'. $list_id .'">';
@@ -587,6 +592,71 @@ function bwlb_add_subscription ( $subscriber_id, $list_id ) {
   return $subscription_saved;
 }
 
+// 5.4
+// remove subscriptions from a subscriber
+// ajax form handler - expects form post data: $_POST['subscriber_id'] and $_POST['list_id']
+function bwlb_unsubscribe() {
+
+  // init
+  $result = array(
+    'status'=> 0,
+    'message'=>'Subscriptions NOT updated',
+    'error'=>'',
+    'errors'=> array()
+  );
+
+  $subscriber_id = ( isset($_POST['subscriber_id']) ) ? (int)esc_attr($_POST['subscriber_id']) : 0;
+  $list_ids = ( isset($_POST['list_ids']) ) ? $_POST['list_ids'] : 0;
+
+  try {
+
+    if ( is_array($list_ids) ):
+
+      foreach($list_ids as &$list_id):
+        bwlb_remove_subscription($subscriber_id, $list_id);
+      endforeach;
+
+    endif;
+
+    $result['status'] = 1;
+    $result['message'] = 'Subscriptions updated';
+
+    $result['html'] = bwlb_get_manage_subscriptions_html($subscriber_id);
+
+  } catch (Exception $e) {
+
+  }
+
+  // return data as json
+  bwlb_return_json( $result );
+}
+
+// 5.5
+// remove single subscription from subscriber
+function bwlb_remove_subscription($subscriber_id, $list_id) {
+
+  $subscription_saved = false;
+
+  if ( bwlb_subscriber_has_subscription($subscriber_id, $list_id) ):
+
+    // get all the subs
+    $subscriptions = bwlb_get_subscriptions($subscriber_id);
+
+    // find the one to remove
+    $list_to_remove = array_search( $list_id, $subscriptions);
+
+    // remove it with php unset
+    unset($subscriptions[$list_to_remove]);
+
+    // update the user's subscriptions
+    update_field(bwlb_get_acf_key('bwlb_subscriptions'), $subscriptions, $subscriber_id);
+
+    $subscription_saved = true;
+
+  endif;
+
+  return $subscription_saved;
+}
 
 /* 6. helpers */
 
@@ -941,7 +1011,7 @@ function bwlb_get_current_options() {
 }
 
 // 6.12
-//
+// manage subscriptions page
 function bwlb_get_manage_subscriptions_html ($subscriber_id) {
 
   $output = '';
@@ -959,8 +1029,8 @@ function bwlb_get_manage_subscriptions_html ($subscriber_id) {
 
     // form html
     $output .= '
-      <form id="bwlb_manage_subsriptions_form" class="bwlb-form" method="post"
-      action="wp_wecf/wp-admin/admin-ajax.php?action=bwlb_unsubscribe">
+      <form id="bwlb_manage_subscriptions_form" class="bwlb-form" method="post"
+      action="/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_unsubscribe">
 
         <input type="hidden" name="subscriber_id" value="' . $subscriber_id . '">
 

@@ -5,9 +5,9 @@ jQuery(document).ready(function($){
   var wpajax_url = document.location.protocol + '//' + document.location.host  + '/wp_wecf/wp-admin/admin-ajax.php';
 
   // add the function call param
-  var email_capture_url = wpajax_url += '?action=bwlb_save_subscription';
+  var email_capture_url = wpajax_url + '?action=bwlb_save_subscription';
 
-  $('form.bwlb-form').bind('submit', function(){    // hijack submission button
+  $('form#bwlb_register_form').bind('submit', function(){    // hijack submission button
 
     // get the jquery form object
     $form = $(this);
@@ -51,6 +51,43 @@ jQuery(document).ready(function($){
     // stop the form from submitting normally
     return false;
 
+  });
+
+  // unsubscribe function
+  var unsubscribe_url = wpajax_url + '?action=bwlb_unsubscribe';
+
+  $(document).on('submit','form#bwlb_manage_subscriptions_form', function() {
+
+    // jquery form object
+    $form = $(this);
+
+    // setup form data
+    var form_data = $form.serialize();
+
+    // submit form with ajax
+    $.ajax({
+      'method':'post',
+      'url':unsubscribe_url,
+      'data':form_data,
+      'dataType':'json',
+      'cache':false,
+      'success': function( data, textStatus ) {
+        if( data.status == 1 ) {
+          $form.replaceWith(data.html); // update html with subscription list html
+          alert(data.message);
+        } else {
+          var msg = data.message + '\n' + data.error + '\n';
+          alert(msg);
+        }
+      },
+      'error': function(jqXHR, textStatus, errorThrown) {
+        // ajax didn't work
+      }
+
+    });
+
+    // prevent form from submitting normally
+    return false;
   });
 
 });
