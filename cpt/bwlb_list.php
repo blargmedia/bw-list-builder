@@ -34,5 +34,105 @@ function bwlb_register_bwlb_list() {
 // End of cptui_register_my_cpts()
 }
 
+if(function_exists("register_field_group"))
+{
+	register_field_group(array (
+		'id' => 'acf_list-settings',
+		'title' => 'List Settings',
+		'fields' => array (
+			array (
+				'key' => 'field_57e5b0eb24ef7',
+				'label' => 'Enable Reward on Opt-in',
+				'name' => 'bwlb_enable_reward',
+				'type' => 'radio',
+				'instructions' => 'Whether or not to reward users when they sign up to a list.',
+				'choices' => array (
+					0 => 'No',
+					1 => 'Yes',
+				),
+				'other_choice' => 0,
+				'save_other_choice' => 0,
+				'default_value' => 0,
+				'layout' => 'vertical',
+			),
+			array (
+				'key' => 'field_57e5b19924ef8',
+				'label' => 'Reward Title',
+				'name' => 'bwlb_reward_title',
+				'type' => 'text',
+				'required' => 1,
+				'conditional_logic' => array (
+					'status' => 1,
+					'rules' => array (
+						array (
+							'field' => 'field_57e5b0eb24ef7',
+							'operator' => '==',
+							'value' => '1',
+						),
+					),
+					'allorany' => 'all',
+				),
+				'default_value' => '',
+				'placeholder' => '',
+				'prepend' => '',
+				'append' => '',
+				'formatting' => 'html',
+				'maxlength' => '',
+			),
+			array (
+				'key' => 'field_57e5b1ca24ef9',
+				'label' => 'Reward File',
+				'name' => 'bwlb_reward_file',
+				'type' => 'file',
+				'required' => 1,
+				'conditional_logic' => array (
+					'status' => 1,
+					'rules' => array (
+						array (
+							'field' => 'field_57e5b0eb24ef7',
+							'operator' => '==',
+							'value' => '1',
+						),
+					),
+					'allorany' => 'all',
+				),
+				'save_format' => 'object',
+				'library' => 'all',
+			),
+		),
+		'location' => array (
+			array (
+				array (
+					'param' => 'post_type',
+					'operator' => '==',
+					'value' => 'bwlb_list',
+					'order_no' => 0,
+					'group_no' => 0,
+				),
+			),
+		),
+		'options' => array (
+			'position' => 'acf_after_title',
+			'layout' => 'default',
+			'hide_on_screen' => array (
+				0 => 'permalink',
+				1 => 'the_content',
+				2 => 'excerpt',
+				3 => 'custom_fields',
+				4 => 'discussion',
+				5 => 'comments',
+				6 => 'revisions',
+				7 => 'slug',
+				8 => 'author',
+				9 => 'format',
+				10 => 'featured_image',
+				11 => 'categories',
+				12 => 'tags',
+				13 => 'send-trackbacks',
+			),
+		),
+		'menu_order' => 0,
+	));
+}
 
 ?>
