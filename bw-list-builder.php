@@ -787,7 +787,11 @@ function bwlb_confirm_subscription($subscriber_id, $list_id) {
 
   if ($subscription_saved):
 
-    $optin_complete = true;
+    $email_sent = bwlb_send_subscriber_email($subscriber_id, 'subscription_confirmed', $list_id);
+
+    if ( $email_sent ): // email susccessful
+      $optin_complete = true;
+    endif;
 
   endif;
 
@@ -1279,7 +1283,7 @@ function bwlb_get_email_template ( $subscriber_id, $email_template_name, $list_i
 
     // confirmed subscription
     $email_templates['subscription_confirmed'] = array(
-      'subject' => 'Thanks for subscribing to ' . $list->post_title . '!',
+      'subject' => 'Confirmation of ' . $list->post_title . ' subscription',
       'body' => '
         ' . $default_email_header . '
         <p>Thanks for subscribing to ' . $list->post_title . '</p>
