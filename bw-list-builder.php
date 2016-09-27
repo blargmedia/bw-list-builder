@@ -60,6 +60,7 @@
       5.9   bwlb_activate_plugin()
       5.10  bwlb_add_reward_link()
       5.11  bwlb_trigger_reward_download()
+      5.12  bwlb_update_reward_link_downloads()
 
     6. helpers
       6.1   bwlb_subscriber_has_subscription()
@@ -230,6 +231,19 @@ function bwlb_form_shortcode( $args, $content="") {  // wp auto passes in the ar
           $output .= '<div clas="bwlb-content">';
           $output .= wpautop($content); // wrap the content with wp paragraphs
           $output .= '</div>';
+        endif;
+
+        // include the reward info
+        $reward = bwlb_get_list_reward($list_id);
+
+        if ($reward !== false):
+
+          $output .= '
+            <div class="bwlb-content bwlb-reward-message">
+              <p>Get a free download of ' . $reward['title'] . ' when you join this list!</p>
+            </div>
+          ';
+
         endif;
 
         // close out the form html
@@ -959,6 +973,8 @@ function bwlb_trigger_reward_download() {
 
     if ( $reward !== false && $reward['downloads'] < bwlb_get_option('bwlb_download_limit') ):
 
+      bwlb_update_reward_link_downloads($uid);
+
       // set the php headers to open reward file as attachment, in order to force download/save
       header("Content-type: application/".$reward['file']['mime_type'],true,200);
       header("Content-disposition: attachment; filename=".$reward['title']);
@@ -971,6 +987,52 @@ function bwlb_trigger_reward_download() {
 
   endif;
 
+}
+
+// 5.12
+// increment the download count each time a download is triggered
+function bwlb_update_reward_link_downloads($uid) {
+
+  global $wpdb;
+
+  $return_value = false;
+
+  try {
+
+    $table_name = $wpdb->prefix . "bwlb_reward_links";
+
+    // get the download count from the db
+    $current_count = $wpdb->get_var(
+      $wpdb->prepare(
+        " SELECT downloads
+          FROM $table_name
+          WHERE uid = %s
+        ",
+        $uid
+      )
+    );
+
+    // increment
+    $new_count = (int)$current_count+1;
+
+    // update the download count in the db
+    $wpdb->query(
+      $wpdb->prepare(
+        " UPDATE $table_name
+          SET downloads = $new_count
+          WHERE uid = %s
+        ",
+        $uid
+      )
+    );
+
+    $return_value = true;
+
+  } catch (Exception $e) {
+
+  }
+
+  return $return_value;
 }
 
 
@@ -1478,7 +1540,9 @@ function bwlb_get_email_template ( $subscriber_id, $email_template_name, $list_i
             . $download_link
             . '">unique download link</a> for '
             . $reward['title']
-            . '!</p>
+            . '! This link will expire after '
+            . $download_limit
+            . 'downloads.</p>
           ';
           break;
       }
