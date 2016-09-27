@@ -24,6 +24,7 @@
       1.11  register custom menus
       1.12  load external scripts for admin
       1.13  register plugin options
+      1.14  register activate/deactivate/uninstall functions
 
     2. shortcodes
       2.1   bwlb_register_shortcodes()
@@ -52,6 +53,9 @@
       5.4   bwlb_unsubscribe()
       5.5   bwlb_remove_subscription()
       5.6   bwlb_send_subscriber_email()
+      5.7   bwlb_confirm_subscription()
+      5.8   bwlb_create_plugin_tables()
+      5.9   bwlb_activate_plugin()
 
     6. helpers
       6.1   bwlb_subscriber_has_subscription()
@@ -147,6 +151,10 @@ add_action('admin_enqueue_scripts', 'bwlb_admin_scripts');
 // 1.13
 // register plugin options
 add_action('admin_init', 'bwlb_register_options');
+
+// 1.14
+// register activate/deactivate/uninstall functions
+register_activation_hook(__FILE__, 'bwlb_activate_plugin');
 
 
 /* 2. shortcodes */
@@ -806,6 +814,57 @@ function bwlb_confirm_subscription($subscriber_id, $list_id) {
 
   return $optin_complete;
 }
+
+// 5.8
+// create custom tables for our plugin
+function bwlb_create_plugin_tables() {
+
+  global $wpdb;  // grab the wordpress database functionality from the global scope
+
+  $return_value = false;
+
+  try {
+
+    $table_name = $wpdb->prefix . "bwlb_reward_links"; // prepend the db prefix from the wp installation
+    $charset_collate = $wpdb->get_charset_collate();
+
+    // mysqk statements
+    $sql = "CREATE TABLE $table_name (
+      id              mediumint(11)   NOT NULL AUTO_INCREMENT,
+      uid             varchar(128)    NOT NULL,
+      subscriber_id   mediumint(11)   NOT NULL,
+      list_id         mediumint(11)   NOT NULL,
+      attachment_id   mediumint(11)   NOT NULL,
+      downloads       mediumint(11)   DEFAULT 0 NOT NULL,
+      UNIQUE KEY id (id)
+    ) $charset_collate;";
+
+    // need to include wordpress functions for dbDelta
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql); // creates if it doesn't exist or updates if it does
+
+    $return_value = true;
+
+  } catch (Exception $e) {
+
+    // php error
+    var_dump($e->getMessage());
+    die();
+  }
+
+  return $return_value;
+}
+
+// 5.9
+// things to run on plugin activation
+function bwlb_activate_plugin() {
+
+  // setup the custom databse tables
+  bwlb_create_plugin_tables();
+
+
+}
+
 
 /* 6. helpers */
 
