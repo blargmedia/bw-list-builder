@@ -2068,20 +2068,87 @@ function bwlb_dashboard_admin_page() {
 // admin page for importing subscribers
 function bwlb_import_admin_page() {
 
-  $output = '
-    <div class="wrap">
+  // includes scripts required for file import field
+  wp_enqueue_media();
 
+  echo('
+    <div class="wrap" id="import_subscribers">
       <h2>Import Subscribers</h2>
 
-      <p>
-      Page Description here...
-      </p>
+      <form id="import_form_1">
+        <table class="form-table">
+          <tbody>
+            <tr>
+              <th scope="row">
+                <label for="bwlb_import_file">Import CSV</label>
+              </th>
+              <td>
+                <div class="wp-uploader">
+                  <input type="text" name="bwlb_import_file_url" class="file-url regular-text" accept="csv"/>
+                  <input type="hidden" name="bwlb_import_file_id" class="file-id" value="0"/>
+                  <input type="button" name="upload-btn" class="upload-btn button-secondary" value="Upload"/>
+                </div>
+                <p class="description" id="bwlb_import_file-description">
+                  Upload files here.
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </form>
 
+      <form id="import_form_2">
+        <table class="form-table">
+          <tbody class="bwlb-dynamic-content">
+
+          </tbody>
+
+          <tbody class="form-table show-only-on-valid" style="display:none">
+            <tr>
+              <th scope="row">
+                <label>Import to List</label>
+              </th>
+              <td>
+                <select name="bwlb_import_list_id">');
+
+                  // generate the list of lists
+                  $lists = get_posts(
+                    array(
+                      'post-type' => 'bwlb_list',
+                      'status' => 'publish',
+                      'posts_per_page' => -1,
+                      'orderby' => 'post_title',
+                      'order' => 'ASC'
+                    )
+                  );
+
+                  // add each list to the select box
+                  foreach ($lists as &$list):
+                    $option = '
+                      <option value="' . $list->ID . '">'
+                        . $list->post_title
+                        . '
+                      </option>
+                    ';
+                    echo $option;
+                  endforeach;
+
+                echo('
+                </select>
+                <p class="description">
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="submit show-only-on-valid" style="display:none">
+          <input type="submit" name="submit" id="submit" class="button button-primary" value="Import"/>
+        </p>
+
+      </form>
     </div>
-
-  ';
-
-  echo $output;
+  ');
 
 }
 

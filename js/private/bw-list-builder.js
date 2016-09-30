@@ -21,4 +21,57 @@ jQuery(document).ready(function($){
 
 	}
 
+  // wp-uploader
+  // adds WP's builtin uploader to a specially formatted html div.wp-uploader
+  $('.wp-uploader').each(function(){
+
+    $uploader = $(this);
+
+    // bind to click event
+    $('.upload-btn',$uploader).click(function(e) {
+
+      e.preventDefault();
+      var file = wp.media({
+        title: 'Upload',
+        multiple: false  // set to true for multiple files at once
+      }).open()
+      .on('select',function(e) {
+        // selected image from the media uploader
+        var uploaded_file = file.state().get('selection').first();
+
+        // convert selected image to JSON
+        var file_url = uploaded_file.attributes.url;
+        var file_id = uploaded_file.id;
+
+        if ( $('.file-url',$uploader).attr('accept') !== undefined) {
+
+          var filetype = $('.file-url',$uploader).attr('accept');
+
+          if ( filetype !== uploaded_file.attributes.subtype) {
+            $('.upload-text',$uploader).val('');
+            alert('The file must be of type: ' + filetype);
+          } else {
+            $('.file-url',$uploader).val(file_url).trigger('change');
+            $('.file-id',$uploader).val(file_id).trigger('change');
+
+          }
+        }
+      });
+    });
+  });
+
+  // store input form jquery objects
+  $import_form_1 = $('#import_form_1','#import_subscribers');
+  $import_form_2 = $('#import_form_2','#import_subscribers');
+
+  // when form 1 is selcted:
+  $('.file_id',$import_form_1).bind('change', function(){
+
+    alert('a csv file has been added successfully');
+
+    // get and serialize the form data
+    var form_1_data = $import_form_1.serialize();
+
+  });
+
 });
