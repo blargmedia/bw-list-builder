@@ -70,7 +70,7 @@ jQuery(document).ready(function($){
   // when form 1 is selcted:
   $('.file-id',$import_form_1).bind('change', function(){
 
-    alert('a csv file has been added successfully');
+    //alert('a csv file has been added successfully');
 
     // get and serialize the form data
     var form_1_data = $import_form_1.serialize();
@@ -131,11 +131,53 @@ jQuery(document).ready(function($){
     var checked = $(this)[0].checked;
 
     if (checked) {
-      $('[name="bwlb_import_rows"]:not(:checked)',$import_form_2).trigger('click');
+      $('[name="bwlb_import_rows[]"]:not(:checked)',$import_form_2).trigger('click');
     } else {
-      $('[name="bwlb_import_rows"]:checked',$import_form_2).trigger('click');
+      $('[name="bwlb_import_rows[]"]:checked',$import_form_2).trigger('click');
     }
 
+  });
+
+  // ajax form handler for import subscribers form 2
+  $(document).on('submit', '#import_subscribers #import_form_2', function(){
+
+    var form_2_action_url = wpajax_url + '?action=bwlb_import_subscribers';
+
+    var form_2_data = $import_form_2.serialize();
+
+    $.ajax({
+      url: form_2_action_url,
+      method: 'post',
+      dataType: 'json',
+      data: form_2_data,
+      success: function(response) {
+        if (response.status == 1) {
+          // success - reset input form
+          $('.bwlb-dynamic-content').html('');
+          $('.show-only-on-valid', $import_form_2).hide();
+          $('.file-url',$import_form_1).val('');
+          $('.file-id',$import_form_1).val(0);
+
+          alert (response.message);
+        } else {
+
+          // build error message
+          var msg = response.message + '\n' + response.error + '\n';
+
+          // loop over the errors
+          $.each(response.errors, function(key,value) {
+            // append the errors one line at a time
+            msg += '\n';
+            msg += '- '+ value;
+          });
+          // notify user
+          alert(msg);
+        }
+      }
+    });
+
+    // stop form from submitting normally
+    return false;
   });
 
   // return html from import form 2
@@ -192,7 +234,7 @@ jQuery(document).ready(function($){
       var tr = '<tr>';
 
       var th = '<th scope="row" class="check-column"><input type="checkbox" id="cb-select-' + row_id +
-        '" name="bwlb_import_rows class="bwlb-input" value="' + row_id + '"/></th>';
+        '" name="bwlb_import_rows[]" class="bwlb-input" value="' + row_id + '"/></th>';
 
       tr += th;
 
@@ -274,7 +316,7 @@ jQuery(document).ready(function($){
     var is_valid = true;
 
     // no subscribers selected
-    if ( $('[name="bwlb_import_rows"]:checked',$import_form_2).length == 0 )
+    if ( $('[name="bwlb_import_rows[]"]:checked',$import_form_2).length == 0 )
       is_valid = false;
 
     // no fname column selected

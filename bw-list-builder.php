@@ -62,6 +62,8 @@
       5.11  bwlb_trigger_reward_download()
       5.12  bwlb_update_reward_link_downloads()
       5.13  bwlb_download_subscribers_csv()
+      5.14  bwlb_parse_import_csv()
+      5.15  bwlb_import_subscribers()
 
 
     6. helpers
@@ -143,6 +145,7 @@ add_action('wp_ajax_bwlb_save_subscription','bwlb_save_subscription');
 add_action('wp_ajax_bwlb_unsubscribe', 'bwlb_unsubscribe');
 add_action('wp_ajax_bwlb_download_subscribers_csv','bwlb_download_subscribers_csv');
 add_action('wp_ajax_bwlb_parse_import_csv', 'bwlb_parse_import_csv');
+add_action('wp_ajax_bwlb_import_subscribers', 'bwlb_import_subscribers');
 
 // 1.9
 // load external files
@@ -1175,6 +1178,91 @@ function bwlb_parse_import_csv() {
   bwlb_return_json($result);
 }
 
+// 5.15
+// import the new subscribers from the admin import page
+// form handler that expects the subscriber data in the $_POST scope
+function bwlb_import_subscribers() {
+
+  $result = array(
+    'status' => 0,
+    'message' => 'Unable to import subscribers',
+    'error' => '',
+    'errors' => array()
+  );
+
+  try {
+
+    $form = $_POST;
+
+    // assignment values
+    $fname_column = (isset($_POST['bwlb_fname_column'])) ? (int) $_POST['bwlb_fname_column'] : 0;
+    $lname_column = (isset($_POST['bwlb_lname_column'])) ? (int) $_POST['bwlb_lname_column'] : 0;
+    $email_column = (isset($_POST['bwlb_email_column'])) ? (int) $_POST['bwlb_email_column'] : 0;
+
+    // the list to import into
+    $list_id = (isset($_POST['bwlb_import_list_id'])) ? (int) $_POST['bwlb_import_list_id'] : 0;
+
+    // which rows to import
+    $selected_rows = (isset($_POST['bwlb_import_rows'])) ? (array) $_POST['bwlb_import_rows'] : array();
+
+    $result['data'] = $selected_rows;
+
+    $subscribers = array();
+
+    $added_count = 0;
+
+    // try to add each row
+    foreach ($selected_rows as &$row_id):
+
+      $subscriber_data = array(
+        'fname' => (string) $_POST['s_'. $row_id . '_' . $fname_column],
+        'lname' => (string) $_POST['s_'. $row_id . '_' . $lname_column],
+        'email' => (string) $_POST['s_'. $row_id . '_' . $email_column],
+      );
+
+      if (!is_email($subscriber_data['email'])):
+
+        $result['errors'] = 'Invalid email found: ' . $subscriber_data['email'] . '. Subscriber not added.';
+
+      else:
+
+        $subscriber_id = bwlb_save_subscriber($subscriber_data);
+
+        if($subscriber_id):
+
+          // add without opt-in
+          $subscription_added = bwlb_add_subscription($subscriber_id, $list_id);
+          $added_count++;
+
+        endif;
+
+      endif;
+
+    endforeach;
+
+    if ($added_count == 0):
+
+      $result['error'] = 'No subscribers imported';
+
+    else:
+      // success
+      $result = array(
+        'status' => 1,
+        'message' => $added_count . 'subscribers added',
+        'error' => '',
+        'errors' => array()
+      );
+
+    endif;
+
+
+  } catch (Exception $e) {
+
+  }
+
+  bwlb_return_json($result);
+}
+
 
 /* 6. helpers */
 
@@ -2191,7 +2279,8 @@ function bwlb_import_admin_page() {
         </table>
       </form>
 
-      <form id="import_form_2">
+      <form id="import_form_2" method="post" action="/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_import_subscribers">
+
         <table class="form-table">
           <tbody class="bwlb-dynamic-content">
 
