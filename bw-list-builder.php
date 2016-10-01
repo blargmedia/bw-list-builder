@@ -142,6 +142,7 @@ add_action('wp_ajax_nopriv_bwlb_unsubscribe', 'bwlb_unsubscribe');
 add_action('wp_ajax_bwlb_save_subscription','bwlb_save_subscription');
 add_action('wp_ajax_bwlb_unsubscribe', 'bwlb_unsubscribe');
 add_action('wp_ajax_bwlb_download_subscribers_csv','bwlb_download_subscribers_csv');
+add_action('wp_ajax_bwlb_parse_import_csv', 'bwlb_parse_import_csv');
 
 // 1.9
 // load external files
@@ -1125,6 +1126,56 @@ function bwlb_download_subscribers_csv() {
 }
 
 
+// 5.14
+// retrieves csv file from server, parse into php array, and return the array as JSON
+// this is an ajax form handler and requires $_POST['bwlb_import_file_id']
+function bwlb_parse_import_csv() {
+
+  $result = array(
+    'status' => 0,
+    'message' => 'Unable to parse imported CSV',
+    'error' => '',
+    'data' => array()
+  );
+
+  try {
+
+    // get the attachment id
+    $attachment_id = (isset($_POST['bwlb_import_file_id'])) ? esc_attr($_POST['bwlb_import_file_id']) : 0;
+
+    $filename = get_attached_file($attachment_id); // builtin wp function
+
+    if ($filename !== false):
+
+      // callout to helper to parse
+      $csv_data = bwlb_csv_to_array($filename, ',');
+
+      // we have data
+      if ( $csv_data !== false && count($csv_data)):
+
+        $result = array(
+          'status' => 1,
+          'message' => 'CSV import data parsed successfully',
+          'error' => '',
+          'data' => $csv_data
+        );
+
+      endif;
+
+    else:
+
+      $result['error'] = 'Import file does not exist.';
+
+    endif;
+
+  } catch (Exception $e) {
+
+  }
+
+  bwlb_return_json($result);
+}
+
+
 /* 6. helpers */
 
 // 6.1
@@ -2023,6 +2074,49 @@ function bwlb_get_export_link($list_id=0) {
   $link_href = '/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_download_subscribers_csv&list_id=' . $list_id;
 
   return esc_url($link_href);
+}
+
+// 6.26
+// reads a csv file and converts it to a php array
+// based on the example from the php documentation
+function bwlb_csv_to_array($filename, $delimiter=',') {
+
+  // important! identifies CRLF vs LF only
+  ini_set('auto_detect_line_endings', true);
+
+  if (!file_exists($filename) || !is_readable($filename))
+    return false;
+
+  $return_data = array();
+
+  if (($handle = fopen($filename, "r")) !== false) {
+
+    $row = 0;
+
+    // loop over the file, one line or 1000 chars at a time
+    while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+
+      $num = count($data);
+
+      $row++;
+
+      $row_data = array();
+
+      // loop over a line
+      for ($c=0;$c<$num;$c++) {
+
+        if ($row == 1): // first row is the header
+          $header[] = $data[$c];
+        else:
+          $return_data[$row-2][$header[$c]] = $data[$c];
+        endif;
+      }
+    }
+
+    fclose($handle);
+  }
+
+  return $return_data;
 }
 
 
