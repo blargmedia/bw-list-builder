@@ -1002,9 +1002,15 @@ function bwlb_trigger_reward_download() {
 
       bwlb_update_reward_link_downloads($uid);
 
+      // get reward mimetype
+      $mimetype = $reward['file']['mime_type'];
+      // get the file type from the mimetype
+      $mimetype_array = explode('/', $mimetype); // php function to convert string to array on '/' delim
+      $filetype = $mimetype_array[1];
+
       // set the php headers to open reward file as attachment, in order to force download/save
-      header("Content-type: application/".$reward['file']['mime_type'],true,200);
-      header("Content-disposition: attachment; filename=".$reward['title']);
+      header("Content-type: ".$mimetype,true,200);
+      header("Content-disposition: attachment; filename=".$reward['title'] . '.' . $filetype);
       header("Pragma: no-cache");
       header("Expires: 0");
       readfile($reward['file']['url']);
