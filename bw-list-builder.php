@@ -226,7 +226,9 @@ function bwlb_form_shortcode( $args, $content="") {  // wp auto passes in the ar
       <form id="bwlb_register_form" name="bwlb_form" class="bwlb-form" method="post"
       action="/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_save_subscription">
 
-        <input type="hidden" name="bwlb_list" value="'. $list_id .'">';
+        <input type="hidden" name="bwlb_list" value="'. $list_id .'">'
+
+        . wp_nonce_field('bwlb-register-subscription_'.$list_id, '_wpnonce', true, false);
 
         if (strlen($title)):
 
@@ -628,74 +630,78 @@ function bwlb_save_subscription() {
     // get the list id from the form post
     $list_id = (int) $_POST['bwlb_list'];
 
-    // prepare the subscriber data from the post
-    // esc_attr - wp function to clean input data and ensure it is safe
-    $subscriber_data = array(
-      'fname'=> esc_attr( $_POST['bwlb_fname'] ),
-      'lname'=> esc_attr( $_POST['bwlb_lname'] ),
-      'email'=> esc_attr( $_POST['bwlb_email'] )
-    );
+    // validate nonce
+    if (check_ajax_referrer('bwlb-register-subscription_'.$list_id)):
 
-    // error storage
-    $errors = array();
+      // prepare the subscriber data from the post
+      // esc_attr - wp function to clean input data and ensure it is safe
+      $subscriber_data = array(
+        'fname'=> esc_attr( $_POST['bwlb_fname'] ),
+        'lname'=> esc_attr( $_POST['bwlb_lname'] ),
+        'email'=> esc_attr( $_POST['bwlb_email'] )
+      );
 
-    // form validation
-    if ( !strlen( $subscriber_data['fname'] ) ) $errors['fname'] = 'First name is required';
-    if ( !strlen( $subscriber_data['email'] ) ) $errors['email'] = 'Email address is required';
-    if ( strlen ( $subscriber_data['email'] ) && !is_email( $subscriber_data['email'] ) ) $errors['email'] = 'Email must be valid';
+      // error storage
+      $errors = array();
 
-    // check for errors
-    if ( count($errors) ):
-      $result['error'] = 'Some fields are still required.';
-      $result['errors'] = $errors;
+      // form validation
+      if ( !strlen( $subscriber_data['fname'] ) ) $errors['fname'] = 'First name is required';
+      if ( !strlen( $subscriber_data['email'] ) ) $errors['email'] = 'Email address is required';
+      if ( strlen ( $subscriber_data['email'] ) && !is_email( $subscriber_data['email'] ) ) $errors['email'] = 'Email must be valid';
 
-    else: // otherwise proceed
+      // check for errors
+      if ( count($errors) ):
+        $result['error'] = 'Some fields are still required.';
+        $result['errors'] = $errors;
 
-      // attempt to create/save subscriber
-      $subscriber_id = bwlb_save_subscriber( $subscriber_data );
+      else: // otherwise proceed
 
-      // if saved subscriber id will be non zero
-      if ( $subscriber_id ):
+        // attempt to create/save subscriber
+        $subscriber_id = bwlb_save_subscriber( $subscriber_data );
 
-        // if already subscribed - create and use a helper function
-        if (bwlb_subscriber_has_subscription( $subscriber_id, $list_id )):
+        // if saved subscriber id will be non zero
+        if ( $subscriber_id ):
 
-          // get the list from the form post
-          $list = get_post( $list_id );  // wp builtin function to get a post
+          // if already subscribed - create and use a helper function
+          if (bwlb_subscriber_has_subscription( $subscriber_id, $list_id )):
 
-          // setup the error message
-          $result ['error'] = esc_attr( $subscriber_data['email'] . ' is already subscribed to ' . $list->post_title . '.');
+            // get the list from the form post
+            $list = get_post( $list_id );  // wp builtin function to get a post
 
-        else:
-
-          // save the subscription
-          $subscription_saved = bwlb_add_subscription ( $subscriber_id, $list_id );
-
-          // check success (non zero)
-          if ( $subscription_saved ):
-
-            // notify subscriber by email
-            // setup new function to do the work and check the result
-            $email_sent = bwlb_send_subscriber_email($subscriber_id, 'new_subscription', $list_id);
-
-            if ( !$email_sent ): // email unsusccessful
-              // remove the subscription
-              bwlb_remove_subscription($subscriber_id, $list_id);
-              $result['error'] = 'unable to send email';
-
-            else:
-
-              $result['status'] = 1;
-              $result['message'] = 'Email sent and Subscription saved';
-
-              // cleanup empty error message
-              unset($result['error']);
-
-            endif;
+            // setup the error message
+            $result ['error'] = esc_attr( $subscriber_data['email'] . ' is already subscribed to ' . $list->post_title . '.');
 
           else:
-            $result['error'] = 'Unable to save subscription.';
 
+            // save the subscription
+            $subscription_saved = bwlb_add_subscription ( $subscriber_id, $list_id );
+
+            // check success (non zero)
+            if ( $subscription_saved ):
+
+              // notify subscriber by email
+              // setup new function to do the work and check the result
+              $email_sent = bwlb_send_subscriber_email($subscriber_id, 'new_subscription', $list_id);
+
+              if ( !$email_sent ): // email unsusccessful
+                // remove the subscription
+                bwlb_remove_subscription($subscriber_id, $list_id);
+                $result['error'] = 'unable to send email';
+
+              else:
+
+                $result['status'] = 1;
+                $result['message'] = 'Email sent and Subscription saved';
+
+                // cleanup empty error message
+                unset($result['error']);
+
+              endif;
+
+            else:
+              $result['error'] = 'Unable to save subscription.';
+
+            endif;
           endif;
         endif;
       endif;
@@ -795,18 +801,22 @@ function bwlb_unsubscribe() {
 
   try {
 
-    if ( is_array($list_ids) ):
+    // validate nonce
+    if(check_ajax_referrer('bwlb-update-subscriptions_'.$subscriber_id)):
 
-      foreach($list_ids as &$list_id):
-        bwlb_remove_subscription($subscriber_id, $list_id);
-      endforeach;
+      if ( is_array($list_ids) ):
 
+        foreach($list_ids as &$list_id):
+          bwlb_remove_subscription($subscriber_id, $list_id);
+        endforeach;
+
+      endif;
+
+      $result['status'] = 1;
+      $result['message'] = 'Subscriptions updated';
+
+      $result['html'] = bwlb_get_manage_subscriptions_html($subscriber_id);
     endif;
-
-    $result['status'] = 1;
-    $result['message'] = 'Subscriptions updated';
-
-    $result['html'] = bwlb_get_manage_subscriptions_html($subscriber_id);
 
   } catch (Exception $e) {
 
@@ -1796,10 +1806,14 @@ function bwlb_get_manage_subscriptions_html ($subscriber_id) {
     // page title
     $title = $subscriber_data['fname'] . '\'s Subscriptions';
 
+    $nonce = wp_nonce_field('bwlb-update-subscriptions_'.$subscriber_id, '_wpnonce', true, false);
+
     // form html
     $output .= '
       <form id="bwlb_manage_subscriptions_form" class="bwlb-form" method="post"
       action="/wp_wecf/wp-admin/admin-ajax.php?action=bwlb_unsubscribe">
+
+        '. $nonce .'
 
         <input type="hidden" name="subscriber_id" value="' . $subscriber_id . '">
 
