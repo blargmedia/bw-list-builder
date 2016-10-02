@@ -1333,7 +1333,7 @@ function bwlb_remove_plugin_tables() {
 
     $table_name = $wpdb->prefix . "bwlb_reward_links";
 
-    $tables_removed = $wpdb->query("DROP TABLE IF EXISTS $table_name");
+    $tables_removed = $wpdb->query("DROP TABLE IF EXISTS $table_name;");
 
   } catch (Exception $e) {
 
@@ -1346,7 +1346,7 @@ function bwlb_remove_plugin_tables() {
 // remove custom post types, posts, and data
 function bwlb_remove_post_data() {
 
-  $global $wpdb;
+  global $wpdb;
 
   $data_removed = false;
 
@@ -1369,7 +1369,7 @@ function bwlb_remove_post_data() {
           $custom_post_types[0],
           $custom_post_types[1]
       )
-    )
+    );
 
     $pm_tablename = $wpdb->prefix . "_postmeta";
     $post_tablemane = $wpdb->prefix . "_posts";
@@ -1383,7 +1383,7 @@ function bwlb_remove_post_data() {
           WHERE wp.ID IS NULL
         "
       )
-    )
+    );
 
   } catch (Exception $e) {
 
